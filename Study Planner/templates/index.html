@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Study Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background: linear-gradient(135deg, #6366f1, #3b82f6);
+        font-family: 'Inter', sans-serif;
+      }
+      .chat-container {
+        max-width: 900px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(12px);
+        border-radius: 1rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      }
+      .message-bubble {
+        padding: 1rem 1.25rem;
+        border-radius: 1.25rem;
+        max-width: 75%;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      .user-message {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        align-self: flex-end;
+      }
+      .agent-message {
+        background: rgba(255, 255, 255, 0.8);
+        color: #1f2937;
+        align-self: flex-start;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <!-- Header -->
+      <header class="glass-card p-4 text-center font-bold text-2xl text-white shadow-lg">
+        📚 Dhanasekar's AI Study Planner
+      </header>
+
+      <!-- Chat History -->
+      <main id="chat-history" class="flex-1 overflow-y-auto p-6 space-y-4 glass-card mt-4">
+        <div class="message-bubble agent-message">
+          Hello! I'm your AI Study Planner. What topic would you like to study today?
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="glass-card p-4 mt-4">
+        <div class="flex items-center">
+          <input
+            type="text"
+            id="user-input"
+            class="flex-1 p-3 border-0 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
+            placeholder="Type your message..."
+          />
+          <button
+            id="send-btn"
+            class="ml-4 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full font-semibold hover:scale-105 transition-transform shadow-lg"
+          >
+            ➤
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <script>
+      const chatHistory = document.getElementById("chat-history");
+      const userInput = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
+
+      function addMessage(sender, text) {
+        const messageElement = document.createElement("div");
+        messageElement.classList.add(
+          "message-bubble",
+          sender === "user" ? "user-message" : "agent-message"
+        );
+        messageElement.textContent = text;
+        chatHistory.appendChild(messageElement);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (message === "") return;
+
+        addMessage("user", message);
+        userInput.value = "";
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+
+          const data = await response.json();
+          if (data.response) {
+            addMessage("agent", data.response);
+          } else if (data.error) {
+            addMessage("agent", `Error: ${data.error}`);
+          } else {
+            addMessage("agent", "Unexpected response from server.");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          addMessage("agent", "Sorry, something went wrong. Please try again.");
+        }
+      }
+
+      sendBtn.addEventListener("click", sendMessage);
+      userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendMessage();
+      });
+    </script>
+  </body>
+</html>
