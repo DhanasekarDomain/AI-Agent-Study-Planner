@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dhanasekar's AI Study Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 1. Added Marked.js library for proper Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #f3f4f6, #e0f2fe);
+      font-family: 'Inter', sans-serif;
+    }
+    .layout {
+      display: flex;
+      height: 100vh;
+    }
+    .sidebar {
+      width: 220px;
+      background: #ffffff;
+      border-right: 1px solid #e5e7eb;
+      padding: 1rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar h2 {
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #1e40af;
+    }
+    .sidebar button {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      background: #e0f2fe;
+      color: #1e40af;
+      font-weight: 500;
+      text-align: left;
+      transition: background 0.2s;
+    }
+    .sidebar button:hover {
+      background: #bfdbfe;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-card {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+    .message-bubble {
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      max-width: 85%; /* Slightly wider for better readability */
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+    .user-message {
+      background: #2563eb;
+      color: white;
+      align-self: flex-end;
+    }
+    .agent-message {
+      background: #f9fafb;
+      color: #111827;
+      align-self: flex-start;
+      width: 90%; /* Standardize width for AI output */
+    }
+
+    /* 2. CRITICAL: Styling for the rendered Markdown */
+    .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+      font-weight: bold;
+      color: #1e40af;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .markdown-content h1 { font-size: 1.5rem; }
+    .markdown-content h2 { font-size: 1.25rem; }
+    
+    .markdown-content p {
+      margin-bottom: 0.75rem;
+    }
+
+    .markdown-content ul {
+      list-style-type: disc;
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .markdown-content ol {
+      list-style-type: decimal;
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .markdown-content li {
+      margin-bottom: 0.25rem;
+    }
+
+    .markdown-content strong {
+      font-weight: 600;
+      color: #111827;
+    }
+
+    /* Typing animation */
+    .typing-dots {
+      display: inline-block;
+      font-size: 1.5rem;
+      letter-spacing: 0.2rem;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { opacity: 0.2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Agents</h2>
+      <button onclick="sendMessage('Plan study for this topic')">📘 Planner</button>
+      <button onclick="sendMessage('Schedule for this topic')">🗓️ Scheduler</button>
+      <button onclick="sendMessage('Review this topic with quiz')">📝 Reviewer</button>
+      <button onclick="sendMessage('Give motivational tips')">💡 Motivation</button>
+      <button onclick="sendMessage('search: best resources for this topic')">🔗 Resources</button>
+    </aside>
+
+    <div class="chat-container">
+      <header class="p-4 text-center font-bold text-3xl md:text-5xl text-gray-700">
+        📘 Dhanasekar's AI Study Planner
+      </header>
+
+      <div class="chat-card">
+        <main id="chat-history" class="flex-1 overflow-y-auto p-6 space-y-4">
+          <div class="message-bubble agent-message markdown-content">
+            Hello! I'm your AI Study Planner. What topic would you like to study today?
+          </div>
+        </main>
+
+        <footer class="p-4 border-t bg-gray-50">
+          <div class="flex items-center">
+            <input
+              type="text"
+              id="user-input"
+              class="flex-1 p-3 border rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Type your message..."
+            />
+            <button
+              id="send-btn"
+              class="ml-4 px-6 py-3 bg-blue-600 text-white rounded-full font-semibold hover:bg-blue-700 transition"
+            >
+              ➤
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatHistory = document.getElementById("chat-history");
+    const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    function addMessage(sender, text) {
+      const messageElement = document.createElement("div");
+      messageElement.classList.add(
+        "message-bubble",
+        sender === "user" ? "user-message" : "agent-message",
+        "markdown-content" // Apply markdown styling
+      );
+
+      if (sender === "agent") {
+        // 3. USE MARKED TO CONVERT TEXT TO HTML
+        messageElement.innerHTML = marked.parse(text);
+      } else {
+        messageElement.textContent = text;
+      }
+
+      chatHistory.appendChild(messageElement);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function showTyping() {
+      const typingElement = document.createElement("div");
+      typingElement.classList.add("message-bubble", "agent-message");
+      typingElement.innerHTML = "<span class='typing-dots'>...</span>";
+      chatHistory.appendChild(typingElement);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      return typingElement;
+    }
+
+    async function sendMessage(message) {
+      if (!message) {
+        message = userInput.value.trim();
+      }
+      if (message === "") return;
+
+      addMessage("user", message);
+      userInput.value = "";
+
+      const typingElement = showTyping();
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+
+        const data = await response.json();
+        chatHistory.removeChild(typingElement);
+
+        if (data.response) {
+          addMessage("agent", data.response);
+        } else if (data.error) {
+          addMessage("agent", `Error: ${data.error}`);
+        } else {
+          addMessage("agent", "Unexpected response from server.");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        if(typingElement.parentNode) chatHistory.removeChild(typingElement);
+        addMessage("agent", "Sorry, something went wrong. Please try again.");
+      }
+    }
+
+    sendBtn.addEventListener("click", () => sendMessage());
+    userInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
